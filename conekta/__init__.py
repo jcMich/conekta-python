@@ -154,7 +154,7 @@ class _Resource(object):
 
     @classmethod
     def load_url(cls, path, method='GET', params=None, api_key=None):
-        response = cls.build_http_request(method, path, params, _api_key = api_key)
+        response = cls.build_http_request(method, path, params, _api_key=api_key)
         return response
 
     @classmethod
@@ -252,7 +252,7 @@ class _FindableResource(_Resource):
     @classmethod
     def find(cls, _id, api_key=None):
         endpoint = cls.class_url()
-        return cls(cls.load_url("%s/%s" % (endpoint, _id), api_key=api_key ))
+        return cls(cls.load_url("%s/%s" % (endpoint, _id), api_key=api_key))
 
     @classmethod
     def where(cls, query={}, limit=10, offset=0, sort=[], api_key=None):
@@ -277,6 +277,10 @@ class _FindableResource(_Resource):
             elif obj["object"] == "log":
                 new_obj = Log(obj)
                 pag.class_name = Log
+
+            elif obj["object"] == "webhook":
+                new_obj = Webhook(obj)
+                pag.class_name = Webhook
 
             pag.data.append(new_obj)
         return pag
