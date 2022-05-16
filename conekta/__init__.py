@@ -32,11 +32,13 @@ data = {
 HEADERS = {
     'Accept': 'application/vnd.conekta-v%s+json' % (API_VERSION),
     'Content-type': 'application/json',
-    'X-Conekta-Client-User-Agent' : json.dumps(data)
+    'X-Conekta-Client-User-Agent': json.dumps(data)
 }
 
+
 api_key = ''
-locale = 'en'
+api_public_key = ''
+locale = 'es'
 
 
 class ConektaError(Exception):
@@ -219,7 +221,7 @@ class _DeletableResource(_Resource):
 
         object_reponse = self.load_via_http_request(uri, 'DELETE', {}, api_key=api_key)
 
-        if list_to_remove != None:
+        if list_to_remove is not None:
             for remove_object in list_to_remove:
                 if remove_object.id == self.id:
                     list_to_remove.remove(remove_object)
@@ -244,7 +246,10 @@ class _CreatableResource(_Resource):
     @classmethod
     def create(cls, params, api_key=None):
         endpoint = cls.class_url()
-        return cls(cls.load_url(endpoint, method='POST', params=params, api_key=api_key))
+        kwargs = {}
+        if cls == Order:
+            kwargs.update({"api_key": api_key})
+        return cls(cls.load_url(endpoint, method='POST', params=params, api_key=api_key), **kwargs)
 
 
 class _FindableResource(_Resource):
@@ -314,6 +319,7 @@ class Charge(_CreatableResource, _FindableResource):
 
 class Order(_CreatableResource, _UpdatableResource, _DeletableResource, _FindableResource, _EventableResource):
     def __init__(self, *args, **kwargs):
+        _api_key = kwargs.pop('api_key', api_key)
         super(Order, self).__init__(*args, **kwargs)
         attributes = args[0]
         self.currency = attributes['currency']
@@ -325,7 +331,7 @@ class Order(_CreatableResource, _UpdatableResource, _DeletableResource, _Findabl
         query = {}
         if 'line_items' in attributes.keys():
             endpoint = 'orders/{}/line_items'.format(attributes['id'])
-            response = self.load_url(endpoint, 'GET', query, api_key=api_key)
+            response = self.load_url(endpoint, 'GET', query, api_key=_api_key)
             for line_item in response["data"]:
                 new_line_item = LineItem(line_item)
                 new_line_item.parent = self
@@ -685,3 +691,12 @@ class CheckoutOrder(_CreatableResource, _UpdatableResource, _DeletableResource, 
 
         def instance_url(self):
             return "orders"
+
+
+class Token(_CreatableResource):
+
+    @classmethod
+    def create(cls, params, _api_key=None):
+        _api_key = (api_public_key or api_key) if _api_key is None else _api_key
+        _api_key = _api_key() if callable(_api_key) else _api_key
+        return super(Token, cls).create(params, api_key=_api_key)
